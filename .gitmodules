@@ -1,0 +1,3 @@
+[submodule "vendor/devalot-pandoc"]
+	path = vendor/devalot-pandoc
+	url = git://pmade.com/devalot-pandoc.git
