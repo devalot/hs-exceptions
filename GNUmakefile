@@ -14,10 +14,14 @@ PANDOC             = $(DEVALOT_PANDOC_BIN)/pandoc
 all: $(DEVALOT_PANDOC) README.md
 
 ################################################################################
+clean::
+	rm -f README.md
+
+################################################################################
 README.md: $(SOURCE)
 	$(PANDOC) -f markdown -t json $< | \
           $(DEVALOT_PANDOC) | \
-          $(PANDOC) -f json -t markdown -o $@
+          $(PANDOC) -f json -t markdown --atx-headers -o $@
 
 ################################################################################
 $(DEVALOT_PANDOC): $(DEVALOT_PANDOC_DIR)
