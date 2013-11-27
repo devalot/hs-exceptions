@@ -11,17 +11,28 @@ PANDOC             = $(DEVALOT_PANDOC_BIN)/pandoc
 .PHONEY: all clean
 
 ################################################################################
-all: $(DEVALOT_PANDOC) README.md
+all: $(DEVALOT_PANDOC) README.md README.html slides.html
 
 ################################################################################
 clean::
-	rm -f README.md
+	rm -f README.html slides.html
 
 ################################################################################
 README.md: $(SOURCE)
 	$(PANDOC) -f markdown -t json $< | \
           $(DEVALOT_PANDOC) | \
           $(PANDOC) -f json -t markdown --atx-headers -o $@
+
+################################################################################
+README.html: README.md
+	$(PANDOC) -f markdown -t html5 -s -o $@ $<
+
+################################################################################
+slides.html: $(SOURCE)
+	$(PANDOC) -f markdown -t json $< | \
+          $(DEVALOT_PANDOC) | \
+          $(PANDOC) -f json -t dzslides \
+            -s --self-contained -o $@
 
 ################################################################################
 $(DEVALOT_PANDOC): $(DEVALOT_PANDOC_DIR)

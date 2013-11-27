@@ -39,6 +39,13 @@ reuse = fmap (+1) . listToMaybe
 -- {END}
 
 --------------------------------------------------------------------------------
+-- {BEGIN: either}
+withError :: [Int] -> Either String Int
+withError []    = Left "this is awkward"
+withError (x:_) = Right (x + 1)
+-- {END}
+
+--------------------------------------------------------------------------------
 handler :: SomeException -> IO ()
 handler _ = putStrLn "ERROR"
 
@@ -49,3 +56,4 @@ main = do
   catch (print $ stupid args) handler
   print $ better args
   print $ reuse args
+  print $ withError args
