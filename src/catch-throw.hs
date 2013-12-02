@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables, DeriveDataTypeable #-}
+
 {-
 
 This file is part of the Haskell presentation hs-exceptions. It is
@@ -16,44 +18,56 @@ module Main (main) where
 --------------------------------------------------------------------------------
 import Control.Applicative
 import Control.Exception
-import Data.Maybe
+import Data.Typeable
 import System.Environment
 
 --------------------------------------------------------------------------------
--- {BEGIN: stupid}
-stupid :: [Int] -> Int
-stupid xs = head xs + 1
+-- {BEGIN: ex}
+data StupidException = StupidException
+  deriving (Typeable)
+
+instance Show StupidException where
+  show StupidException =
+    "StupidException: you did something stupid"
+
+instance Exception StupidException
 -- {END}
 
 --------------------------------------------------------------------------------
--- {BEGIN: better}
-better :: [Int] -> Maybe Int
-better []    = Nothing
-better (x:_) = Just (x + 1)
+-- {BEGIN: throw}
+naughtyFunction :: Int -> Int
+naughtyFunction x =
+  if x > 0
+    then x - 1
+    else throw StupidException
 -- {END}
 
 --------------------------------------------------------------------------------
--- {BEGIN: reuse}
-reuse :: [Int] -> Maybe Int
-reuse = fmap (+1) . listToMaybe
+-- {BEGIN: inline}
+inline :: Int -> IO Int
+inline x =
+  catch (return $! naughtyFunction x)
+        (\(_ex :: StupidException) -> return 0)
 -- {END}
 
 --------------------------------------------------------------------------------
--- {BEGIN: either}
-withError :: [Int] -> Either String Int
-withError []    = Left "this is awkward"
-withError (x:_) = Right (x + 1)
+-- {BEGIN: helper}
+helper :: Int -> IO Int
+helper x =
+  catch (return $! naughtyFunction x)
+        handler
+  where
+    handler :: StupidException -> IO Int
+    handler _ = return 0
 -- {END}
-
---------------------------------------------------------------------------------
-handler :: ErrorCall -> IO ()
-handler _ = putStrLn "ERROR"
 
 --------------------------------------------------------------------------------
 main :: IO ()
 main = do
   args <- fmap read <$> getArgs
-  catch (print $ stupid args) handler
-  print $ better args
-  print $ reuse args
-  print $ withError args
+
+  print =<< case args of
+    []    -> inline 0
+    (0:_) -> helper 0
+    (1:_) -> helper 1
+    (x:_) -> inline x
