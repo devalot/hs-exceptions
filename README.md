@@ -74,3 +74,76 @@ withError :: [Int] -> Either String Int
 withError []    = Left "this is awkward"
 withError (x:_) = Right (x + 1)
 ~~~~
+
+# Type Inhabitants
+
+<div class="notes">
+
+</div>
+
+~~~~ {.haskell include="src/bottom.hs" token="bool"}
+data Bool = False | True
+~~~~
+
+# Bottom (⊥)
+
+<div class="notes">
+
+Illustrates that bottom values aren't a problem until they're evaluated.
+
+</div>
+
+~~~~ {.haskell include="src/bottom.hs" token="list"}
+bools :: [Bool]
+bools = [False, True, undefined]
+~~~~
+
+# Creating ⊥
+
+<div class="notes">
+
+</div>
+
+~~~~ {.haskell}
+undefined :: a
+error :: String -> a
+
+badBoy :: a
+badBoy = badBoy
+~~~~
+
+# Catching Exceptions
+
+<div class="notes">
+
+</div>
+
+# Throwing Exceptions
+
+<div class="notes">
+
+</div>
+
+# Threads and Exceptions
+
+<div class="notes">
+
+</div>
+
+Exceptions are used to:
+
+-   Kill threads
+
+-   Foo Bar
+
+# Exception Evaluation
+
+<div class="notes">
+
+</div>
+
+# There's a Package For That
+
+<div class="notes">
+
+</div>
