@@ -75,6 +75,157 @@ withError []    = Left "this is awkward"
 withError (x:_) = Right (x + 1)
 ~~~~
 
+# Maybe and Either
+
+`Maybe` and `Either` are also monads!
+
+
+
+
+
+# Maybe and IO
+
+
+
+
+
+~~~~ {.haskell include="src/maybe.hs" token="size"}
+size :: FilePath -> IO (Maybe Integer)
+size f = do
+  exist <- fileExist f
+  
+  if exist
+    then Just <$> fileSize f
+    else return Nothing
+~~~~
+
+# Maybe and IO
+
+
+
+
+
+~~~~ {.haskell include="src/maybe.hs" token="add"}
+add :: FilePath -> FilePath -> IO (Maybe Integer)
+add f1 f2 = do
+  s1 <- size f1
+  s2 <- size f2
+
+  if isNothing s1 || isNothing s2
+    then return Nothing
+    else return ((+) <$> s1 <*> s2)
+~~~~
+
+# MaybeT
+
+
+
+
+
+~~~~ {.haskell include="src/maybe.hs" token="sizeT"}
+sizeT :: FilePath -> MaybeT IO Integer
+sizeT f = do
+  exist <- lift (fileExist f)
+           
+  if exist
+    then lift (fileSize f)
+    else mzero
+~~~~
+
+# Maybe T
+
+
+
+
+
+~~~~ {.haskell include="src/maybe.hs" token="addT"}
+addT :: FilePath -> FilePath -> IO (Maybe Integer)
+addT f1 f2 = runMaybeT $ do
+  s1 <- sizeT f1
+  s2 <- sizeT f2
+  return (s1 + s2)
+~~~~
+
+# Either and IO
+
+
+
+
+
+~~~~ {.haskell include="src/either.hs" token="size"}
+size :: FilePath -> IO (Either String Integer)
+size f = do
+  exist <- fileExist f
+
+  if exist
+    then Right <$> fileSize f
+    else return . Left $ "no such file: " ++ f
+~~~~
+
+# Either and IO
+
+
+
+
+
+~~~~ {.haskell include="src/either.hs" token="add"}
+add :: FilePath -> FilePath -> IO (Either String Integer)
+add f1 f2 = do
+  s1 <- size f1
+
+  case s1 of
+    Left _  -> return s1
+    Right x -> do
+      s2 <- size f2
+      case s2 of
+        Left _  -> return s2
+        Right y -> return . Right $ x + y
+~~~~
+
+# ErrorT
+
+
+
+
+
+~~~~ {.haskell include="src/either.hs" token="sizeT"}
+sizeT :: FilePath -> ErrorT String IO Integer
+sizeT f = do
+  exist <- lift $ fileExist f
+
+  if exist
+    then lift $ fileSize f
+    else fail $ "no such file: " ++ f
+~~~~
+
+# ErrorT
+
+
+
+
+
+~~~~ {.haskell include="src/either.hs" token="addT"}
+addT :: FilePath -> FilePath -> IO (Either String Integer)
+addT f1 f2 = runErrorT $ do
+  s1 <- sizeT f1
+  s2 <- sizeT f2
+  return (s1 + s2)
+~~~~
+
+# Hidden/Internal ErrorT
+
+
+
+
+
+~~~~ {.haskell include="src/either.hs" token="addT'"}
+addT' :: FilePath -> FilePath -> IO (Either String Integer)
+addT' f1 f2 = runErrorT $ do
+  s1 <- ErrorT $ size f1
+  s2 <- ErrorT $ size f2
+  return (s1 + s2)
+~~~~
+
 # Type Inhabitants
 
 
@@ -146,6 +297,17 @@ In the example below you'll notice the use of the "`$!`" operator. This
 forces evaluation to WHNF so exceptions don't sneak out of the `catch`
 function as unevaluated thunks.
 
+
+
+~~~~ {.haskell include="src/catch-throw.hs" token="inline"}
+inline :: Int -> IO Int
+inline x =
+  catch (return $! naughtyFunction x)
+        (\(_ex :: StupidException) -> return 0)
+~~~~
+
+
+
 The second argument to `catch` is a function to handle a caught
 exception. GHC uses the type of the function to determine if it can
 handle the caught exception. If GHC can't infer the type of the function
@@ -160,20 +322,13 @@ should use something like the `bracket` or `finally` functions.
 
 
 
-~~~~ {.haskell include="src/catch-throw.hs" token="inline"}
-inline :: Int -> IO Int
-inline x =
-  catch (return $! naughtyFunction x)
-        (\(_ex :: StupidException) -> return 0)
-~~~~
-
 # Catching Exceptions (w/ a Helper)
 
 
 
 Below is another example of catching exceptions. This time a helper
 function with an explicit type signature is used to handle the
-exception. This allows us to avoid type annotations and the
+exception. This allows us to avoid inline type annotations and the
 `ScopedTypeVariables` extension.
 
 
@@ -194,8 +349,8 @@ helper x =
 
 Throwing exceptions is really easy. Unlike catching exceptions you don't
 need to be in the `IO` monad to throw them. If you do happen to be in
-the `IO` monad you can use the `throwIO` function instead of the "pure"
-`throw` function.
+the `IO` monad you should use the `throwIO` function instead of the
+"pure" `throw` function.
 
 
 
@@ -250,7 +405,9 @@ Additional problems created by concurrency:
 
 -   Exceptions are asynchronous.
 
--   You need to mask exceptions in critical code.
+-   Need to mask exceptions in critical code.
+
+-   Probably don't want unevaluated exceptions leaking out.
 
 # There's a Package For That
 
@@ -261,3 +418,7 @@ Just use the [async](http://hackage.haskell.org/package/async) package.
 
 
 
+
+~~~~ {.haskell}
+try :: Exception e => IO a -> IO (Either e a)
+~~~~

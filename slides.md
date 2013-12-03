@@ -71,6 +71,86 @@ that indicates success or failure.  We won't discuss this further.
 ~~~{.haskell include="src/head.hs" token="either"}
 ~~~
 
+# Maybe and Either
+
+`Maybe` and `Either` are also monads!
+
+<div class="notes">
+</div>
+
+# Maybe and IO
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/maybe.hs" token="size"}
+~~~
+
+# Maybe and IO
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/maybe.hs" token="add"}
+~~~
+
+# MaybeT
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/maybe.hs" token="sizeT"}
+~~~
+
+# Maybe T
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/maybe.hs" token="addT"}
+~~~
+
+# Either and IO
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/either.hs" token="size"}
+~~~
+
+
+# Either and IO
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/either.hs" token="add"}
+~~~
+
+# ErrorT
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/either.hs" token="sizeT"}
+~~~
+
+# ErrorT
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/either.hs" token="addT"}
+~~~
+
+# Hidden/Internal ErrorT
+
+<div class="notes">
+</div>
+
+~~~{.haskell include="src/either.hs" token="addT'"}
+~~~
+
 # Type Inhabitants
 
 <div class="notes">
@@ -139,6 +219,13 @@ In the example below you'll notice the use of the "`$!`" operator.
 This forces evaluation to WHNF so exceptions don't sneak out of the
 `catch` function as unevaluated thunks.
 
+</div>
+
+~~~{.haskell include="src/catch-throw.hs" token="inline"}
+~~~
+
+<div class="notes">
+
 The second argument to `catch` is a function to handle a caught
 exception.  GHC uses the type of the function to determine if it can
 handle the caught exception.  If GHC can't infer the type of the
@@ -154,16 +241,13 @@ functions.
 
 </div>
 
-~~~{.haskell include="src/catch-throw.hs" token="inline"}
-~~~
-
 # Catching Exceptions (w/ a Helper)
 
 <div class="notes">
 
 Below is another example of catching exceptions.  This time a helper
 function with an explicit type signature is used to handle the
-exception.  This allows us to avoid type annotations and the
+exception.  This allows us to avoid inline type annotations and the
 `ScopedTypeVariables` extension.
 
 </div>
@@ -177,8 +261,8 @@ exception.  This allows us to avoid type annotations and the
 
 Throwing exceptions is really easy.  Unlike catching exceptions you
 don't need to be in the `IO` monad to throw them.  If you do happen to
-be in the `IO` monad you can use the `throwIO` function instead of the
-"pure" `throw` function.
+be in the `IO` monad you should use the `throwIO` function instead of
+the "pure" `throw` function.
 
 </div>
 
@@ -220,7 +304,9 @@ Additional problems created by concurrency:
 
   * Exceptions are asynchronous.
 
-  * You need to mask exceptions in critical code.
+  * Need to mask exceptions in critical code.
+
+  * Probably don't want unevaluated exceptions leaking out.
 
 # There's a Package For That
 
@@ -232,3 +318,7 @@ Just use the [async][] package.
 
 <div class="notes">
 </div>
+
+~~~{.haskell}
+try :: Exception e => IO a -> IO (Either e a)
+~~~
