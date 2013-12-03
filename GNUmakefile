@@ -21,7 +21,9 @@ clean::
 README.md: $(SOURCE)
 	$(PANDOC) -f markdown -t json $< | \
           $(DEVALOT_PANDOC) | \
-          $(PANDOC) -f json -t markdown --atx-headers -o $@
+          $(PANDOC) -f json -t markdown --atx-headers -o $@.tmp
+	sed -r 's|^</?div.*$$||' < $@.tmp > $@
+	rm $@.tmp
 
 ################################################################################
 README.html: README.md
