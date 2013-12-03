@@ -2,6 +2,16 @@
 % Peter Jones <br/> <pjones@devalot.com>
 % December 4, 2013
 
+# Introduction
+
+<div class="notes">
+</div>
+
+# Errors
+
+<div class="notes">
+</div>
+
 # Stupid
 
 <div class="notes">
@@ -150,6 +160,11 @@ that indicates success or failure.  We won't discuss this further.
 
 ~~~{.haskell include="src/either.hs" token="addT'"}
 ~~~
+
+# Exceptions
+
+<div class="notes">
+</div>
 
 # Type Inhabitants
 
