@@ -1,4 +1,28 @@
+# Introduction
+
+What's the difference between errors and exceptions?
+
+
+
+Most languages make a distinction between values that represent failure
+(errors) and the mechanism to abort computations and unwind the stack
+(exceptions.) Haskell is unique in that the type system makes it safe
+and easy to build failure into types instead of lumping everything into
+something like `NULL` or `-1`.
+
+It also stands out by supporting exceptions through a library of
+functions and types instead of directly in the syntax of the language.
+The fact that there's no dedicated keywords for exceptions might seem
+weird until you discover how flexible and expressive Haskell is.
+
+This presentation aims to show how closely related errors and exceptions
+are, and how to keep them separate.
+
+
+
 # Stupid
+
+Prefer errors to exceptions.
 
 
 
@@ -81,11 +105,24 @@ withError (x:_) = Right (x + 1)
 
 
 
+If you have several functions that return one of these types you can use
+`do` notation to sequence them and abort the entire block on the first
+failure. This allows you to write short code that implicitly checks the
+return value of every function.
+
+Things tend to get a bit messing when you mix monads though...
+
 
 
 # Maybe and IO
 
 
+
+The code below demonstrates mixing two monads, `IO` and `Maybe`. Clearly
+we want to be able to perform I/O but we also want to use the `Maybe`
+type to signal when a file doesn't exist. This isn't too complicated,
+but what happens when we want to use the power of the `Maybe` monad to
+short circuit a computation when we encounter a `Nothing`?
 
 
 
@@ -103,22 +140,30 @@ size f = do
 
 
 
+Because `IO` is the outer monad and we can't do without it, we sort of
+loose the ability of the `Maybe` monad.
+
 
 
 ~~~~ {.haskell include="src/maybe.hs" token="add"}
 add :: FilePath -> FilePath -> IO (Maybe Integer)
 add f1 f2 = do
   s1 <- size f1
-  s2 <- size f2
-
-  if isNothing s1 || isNothing s2
-    then return Nothing
-    else return ((+) <$> s1 <*> s2)
+  case s1 of
+    Nothing -> return Nothing
+    Just x  -> size f2 >>= \s2 ->
+      case s2 of
+        Nothing -> return Nothing
+        Just y  -> return . Just $ x + y
 ~~~~
 
 # MaybeT
 
 
+
+Using the `MaybeT` monad transformer we can make `IO` the inner monad
+and restore the `Maybe` goodness. We don't really see the benefit in the
+`sizeT` function but note that its complexity remains about the same.
 
 
 
@@ -136,6 +181,9 @@ sizeT f = do
 
 
 
+The real payoff comes in the `addT` function. Compare with the `add`
+function above.
+
 
 
 ~~~~ {.haskell include="src/maybe.hs" token="addT"}
@@ -149,6 +197,10 @@ addT f1 f2 = runMaybeT $ do
 # Either and IO
 
 
+
+This version using `Either` is nearly identical to the `Maybe` version
+above. The only difference is that we can now report the name of the
+file which doesn't exist.
 
 
 
@@ -166,25 +218,28 @@ size f = do
 
 
 
+To truly abort the `add` function when one of the files doesn't exist
+we'd need to replicate the nested `case` code from the `Maybe` example.
+Here I'm cheating and using `Either`'s applicative instance. This
+doesn't short circuit though.
+
 
 
 ~~~~ {.haskell include="src/either.hs" token="add"}
 add :: FilePath -> FilePath -> IO (Either String Integer)
 add f1 f2 = do
   s1 <- size f1
-
-  case s1 of
-    Left _  -> return s1
-    Right x -> do
-      s2 <- size f2
-      case s2 of
-        Left _  -> return s2
-        Right y -> return . Right $ x + y
+  s2 <- size f2
+  return ((+) <$> s1 <*> s2)
 ~~~~
 
 # ErrorT
 
 
+
+The `ErrorT` monad transformer is to `Either` what `MaybeT` is to
+`Maybe`. Again, changing `size` to work with a transformer isn't that
+big of a deal.
 
 
 
@@ -202,6 +257,8 @@ sizeT f = do
 
 
 
+But it makes a big difference in the `addT` function.
+
 
 
 ~~~~ {.haskell include="src/either.hs" token="addT"}
@@ -216,6 +273,11 @@ addT f1 f2 = runErrorT $ do
 
 
 
+The really interesting thing is that we didn't actually have to change
+`size` at all. We could have retained the non-transformer version and
+used the `ErrorT` constructor to lift the `size` function into the
+transformer.
+
 
 
 ~~~~ {.haskell include="src/either.hs" token="addT'"}
@@ -225,6 +287,10 @@ addT' f1 f2 = runErrorT $ do
   s2 <- ErrorT $ size f2
   return (s1 + s2)
 ~~~~
+
+# Exceptions
+
+Let's turn our attention to exceptions.
 
 # Type Inhabitants
 
@@ -417,8 +483,18 @@ Just use the [async](http://hackage.haskell.org/package/async) package.
 
 
 
+The `try` function allows us to turn exceptions into errors in the form
+of `IO` and `Either`, or as you now know, `ErrorT`.
+
+It's not hard to see how flexible exception handling in Haskell is, in
+no small part due to it not being part of the syntax. Non-strict
+evaluation is the other major ingredient.
+
 
 
 ~~~~ {.haskell}
 try :: Exception e => IO a -> IO (Either e a)
+
+-- Which is equivalent to:
+try :: Exception e => IO a -> ErrorT e IO a
 ~~~~

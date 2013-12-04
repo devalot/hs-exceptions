@@ -40,14 +40,8 @@ size f = do
 add :: FilePath -> FilePath -> IO (Either String Integer)
 add f1 f2 = do
   s1 <- size f1
-
-  case s1 of
-    Left _  -> return s1
-    Right x -> do
-      s2 <- size f2
-      case s2 of
-        Left _  -> return s2
-        Right y -> return . Right $ x + y
+  s2 <- size f2
+  return ((+) <$> s1 <*> s2)
 -- {END}
 
 --------------------------------------------------------------------------------

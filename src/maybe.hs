@@ -18,7 +18,6 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
-import Data.Maybe
 import System.Environment
 import System.IO
 import System.Posix.Files (fileExist)
@@ -43,11 +42,12 @@ size f = do
 add :: FilePath -> FilePath -> IO (Maybe Integer)
 add f1 f2 = do
   s1 <- size f1
-  s2 <- size f2
-
-  if isNothing s1 || isNothing s2
-    then return Nothing
-    else return ((+) <$> s1 <*> s2)
+  case s1 of
+    Nothing -> return Nothing
+    Just x  -> size f2 >>= \s2 ->
+      case s2 of
+        Nothing -> return Nothing
+        Just y  -> return . Just $ x + y
 -- {END}
 
 --------------------------------------------------------------------------------
