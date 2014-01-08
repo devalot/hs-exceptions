@@ -1,10 +1,11 @@
-% Errors and Exceptions in Haskell
+% Exceptions and Errors in Haskell
 % Peter Jones <br/> <pjones@devalot.com>
-% January 4, 2014
+% January 8, 2014
 
-# Introduction
+# Exceptions
 
-What's the difference between errors and exceptions?
+![Exceptions](img/explosion.jpg)\
+Creative Commons image by [gynti](http://www.flickr.com/photos/gynti)
 
 <div class="notes">
 
@@ -24,9 +25,239 @@ exceptions are, and how to keep them separate.
 
 </div>
 
-# Stupid
+# Haskell Exceptions
 
-Prefer errors to exceptions.
+  * No dedicated syntax
+
+  * Very limited in Haskell 2010
+
+  * Expanded by GHC
+
+# Type Inhabitants
+
+<div class="notes">
+
+In order to understand how exceptions work we first need to talk about
+type inhabitants and bottom.
+
+The `Bool` type is a very simple type that doesn't use any type
+variables and only has 2 data constructors.  This means that there can
+only be 2 unique values for this type.  Or does it?
+
+</div>
+
+~~~{.haskell include="src/bottom.hs" token="bool"}
+~~~
+
+# Bottom (⊥)
+
+<div class="notes">
+
+All types in Haskell support a value called bottom.  This means that
+the `Bool` type actually has 3 possible values.  Exceptions and
+non-termination are examples of bottom values.
+
+The list below illustrates that bottom values aren't a problem until
+they're evaluated.
+
+</div>
+
+~~~{.haskell include="src/bottom.hs" token="list"}
+~~~
+
+# Creating ⊥
+
+<div class="notes">
+
+Haskell includes 2 functions for creating bottom values: `undefined`
+and `error`.  In GHC `undefined` is implemented using `error` and
+`error` throws an exception.
+
+You can create a bottom value directly by writing a non-terminating
+function.
+
+</div>
+
+~~~{.haskell}
+-- Raises exceptions in GHC:
+undefined :: a
+error :: String -> a
+
+-- Non-termination:
+badBoy :: a
+badBoy = badBoy
+~~~
+
+# Catching Exceptions (Inline)
+
+<div class="notes">
+
+Catching exceptions is straight forward as long as you remember that
+you can only catch exceptions in the `IO` monad.
+
+</div>
+
+~~~{.haskell include="src/catch-throw.hs" token="inline"}
+~~~
+
+<div class="notes">
+
+The second argument to `catch` is a function to handle a caught
+exception.  GHC uses the type of the function to determine if it can
+handle the caught exception.  If GHC can't infer the type of the
+function you'll need to add a type annotation like in the example
+above.  This requires the `ScopedTypeVariables` extension.
+
+If you want to handle more than one exception type you'll need to use
+something like the `catches` function.  To catch all possible
+exceptions you can catch the `SomeException` type since it's at the
+top of the exception type hierarchy.  This isn't generally wise and
+instead you should use something like the `bracket` or `finally`
+functions.
+
+One interesting thing to note is that GHC differs from Haskell 2010
+with regards to `catch`.  Haskell 2010 states that `catch` should
+catch all exceptions regardless of their type.  Probably because those
+exceptions would all be `IOError`s.
+
+
+</div>
+
+# Catching Exceptions (w/ a Helper)
+
+<div class="notes">
+
+Below is another example of catching exceptions.  This time a helper
+function with an explicit type signature is used to handle the
+exception.  This allows us to avoid inline type annotations and the
+`ScopedTypeVariables` extension.
+
+</div>
+
+~~~{.haskell include="src/catch-throw.hs" token="helper"}
+~~~
+
+# Throwing Exceptions
+
+<div class="notes">
+
+Throwing exceptions is really easy, although you must be in the `IO`
+monad to do so.  Haskell 2010 provides a set of functions for creating
+and raising exceptions.
+
+</div>
+
+*Haskell 2010:*
+
+~~~{.haskell}
+-- Create an exception.
+userError :: String -> IOError
+
+-- Raise an exception.
+ioError :: IOError -> IO a
+
+-- fail from the IO Monad is both.
+fail = ioError . userError :: String -> IO a
+~~~
+
+# Throwing Exceptions
+
+<div class="notes">
+
+GHC adds on to Haskell 2010 with functions like `throwIO` and `throw`.
+The `throw` function allows you to raise an exception in pure code and
+is considered to be a misfeature.
+
+</div>
+
+*GHC:*
+
+~~~{.haskell include="src/catch-throw.hs" token="throwIO"}
+~~~
+
+# Throwing from Pure Code
+
+<div class="notes">
+
+As mentioned above, GHC adds a `throw` function that allows you to
+raise an exception from pure code.  Unfortunately this makes it very
+difficult to catch.
+
+</div>
+
+~~~{.haskell include="src/catch-throw.hs" token="throw"}
+~~~
+
+# Catching Exceptions From `throw`
+
+<div class="notes">
+
+You need to ensure that values are evaluated because they might
+contain unevaluated exceptions.
+
+In the example below you'll notice the use of the "`$!`" operator.
+This forces evaluation to WHNF so exceptions don't sneak out of the
+`catch` function as unevaluated thunks.
+
+</div>
+
+~~~{.haskell include="src/catch-throw.hs" token="forced"}
+~~~
+
+# Creating Custom Exceptions
+
+<div class="notes">
+
+Any type can be used as an exception as long as it's an instance of
+the `Exception` type class.  Deriving from the `Typeable` class makes
+creating the `Exception` instance trivial.  However, using `Typeable`
+means you need to enable the `DeriveDataTypeable` GHC extension.
+
+You can also automatically derive the `Show` instance as with most
+other types, but creating one manually allows you to write a more
+descriptive message for the custom exception.
+
+</div>
+
+~~~{.haskell include="src/catch-throw.hs" token="ex"}
+~~~
+
+# Threads and Exceptions
+
+<div class="notes">
+
+Concurrency greatly complicates exception handling.  The GHC runtime
+uses exceptions to send various signals to threads.  You also need to
+be very careful with unevaluated thunks exiting from a thread when it
+terminates.
+
+</div>
+
+Additional problems created by concurrency:
+
+  * Exceptions are used to kill threads
+
+  * Exceptions are asynchronous
+
+  * Need to mask exceptions in critical code
+
+  * Probably don't want unevaluated exceptions leaking out
+
+# There's a Package For That
+
+Just use the [async][] package.
+
+[async]: http://hackage.haskell.org/package/async
+
+# Errors (Instead of Exceptions)
+
+  * Explicit
+
+  * Checked by the compiler
+
+  * Way better than `NULL` or `-1`
+
+# Stupid
 
 <div class="notes">
 
@@ -45,6 +276,8 @@ works with non-empty lists.
 
 # Better
 
+Prefer errors to exceptions.
+
 <div class="notes">
 
 A better approach is to avoid the use of `head` and pattern match the
@@ -52,8 +285,7 @@ list directly.  The function below is *total* since it can handle
 lists of any length (including infinite lists).
 
 Of course, if the list or its head is bottom (⊥) then this function
-will throw an exception when the patterns are evaluated.  We'll talk
-about bottom in a bit.
+will throw an exception when the patterns are evaluated.
 
 </div>
 
@@ -131,7 +363,7 @@ complicated, but what happens when we want to use the power of the
 <div class="notes">
 
 Because `IO` is the outer monad and we can't do without it, we sort of
-loose the ability of the `Maybe` monad.
+loose the superpowers of the `Maybe` monad.
 
 </div>
 
@@ -185,7 +417,8 @@ file which doesn't exist.
 To truly abort the `add` function when one of the files doesn't exist
 we'd need to replicate the nested `case` code from the `Maybe`
 example.  Here I'm cheating and using `Either`'s applicative instance.
-This doesn't short circuit though.
+However, this doesn't short circuit the second file test if the first
+fails.
 
 </div>
 
@@ -223,179 +456,12 @@ But it makes a big difference in the `addT` function.
 The really interesting thing is that we didn't actually have to change
 `size` at all.  We could have retained the non-transformer version and
 used the `ErrorT` constructor to lift the `size` function into the
-transformer.
+transformer.  The `MaybeT` constructor can be used in a similar way.
 
 </div>
 
 ~~~{.haskell include="src/either.hs" token="addT'"}
 ~~~
-
-# Exceptions
-
-Let's turn our attention to exceptions.
-
-# Type Inhabitants
-
-<div class="notes">
-
-The `Bool` type is a very simple type that doesn't use any type
-variables and only has 2 data constructors.  This means that there can
-only be 2 unique values for this type.  Or does it?
-
-</div>
-
-~~~{.haskell include="src/bottom.hs" token="bool"}
-~~~
-
-# Bottom (⊥)
-
-<div class="notes">
-
-All types in Haskell support a value called bottom.  This means that
-the `Bool` type actually has 3 possible values.  Exceptions and
-non-termination are examples of bottom values.
-
-The list below illustrates that bottom values aren't a problem until
-they're evaluated.
-
-</div>
-
-~~~{.haskell include="src/bottom.hs" token="list"}
-~~~
-
-# Creating ⊥
-
-<div class="notes">
-
-Haskell includes 2 functions for creating bottom values: `undefined`
-and `error`.  In GHC `undefined` is implemented using `error` and
-`error` throws an exception.
-
-You can create a bottom value directly by writing a non-terminating
-function.
-
-</div>
-
-~~~{.haskell}
--- Raise exceptions in GHC:
-undefined :: a
-error :: String -> a
-
--- Non-termination:
-badBoy :: a
-badBoy = badBoy
-~~~
-
-# Catching Exceptions (Inline)
-
-<div class="notes">
-
-Catching exceptions is straight forward as long as you remember 2
-things:
-
-  1. You can only catch exceptions in the `IO` monad, and
-
-  2. You need to ensure that values are evaluated because they might
-     contain unevaluated exceptions.
-
-In the example below you'll notice the use of the "`$!`" operator.
-This forces evaluation to WHNF so exceptions don't sneak out of the
-`catch` function as unevaluated thunks.
-
-</div>
-
-~~~{.haskell include="src/catch-throw.hs" token="inline"}
-~~~
-
-<div class="notes">
-
-The second argument to `catch` is a function to handle a caught
-exception.  GHC uses the type of the function to determine if it can
-handle the caught exception.  If GHC can't infer the type of the
-function you'll need to add a type annotation like in the example
-below.  This requires the `ScopedTypeVariables` extension.
-
-If you want to handle more than one exception type you'll need to use
-something like the `catches` function.  To catch all possible
-exceptions you can catch the `SomeException` type since it's at the
-top of the exception type hierarchy.  This isn't generally wise and
-instead you should use something like the `bracket` or `finally`
-functions.
-
-</div>
-
-# Catching Exceptions (w/ a Helper)
-
-<div class="notes">
-
-Below is another example of catching exceptions.  This time a helper
-function with an explicit type signature is used to handle the
-exception.  This allows us to avoid inline type annotations and the
-`ScopedTypeVariables` extension.
-
-</div>
-
-~~~{.haskell include="src/catch-throw.hs" token="helper"}
-~~~
-
-# Throwing Exceptions
-
-<div class="notes">
-
-Throwing exceptions is really easy.  Unlike catching exceptions you
-don't need to be in the `IO` monad to throw them.  If you do happen to
-be in the `IO` monad you should use the `throwIO` function instead of
-the "pure" `throw` function.
-
-</div>
-
-~~~{.haskell include="src/catch-throw.hs" token="throw"}
-~~~
-
-# Creating Custom Exceptions
-
-<div class="notes">
-
-Any type can be used as an exception as long as it's an instance of
-the `Exception` type class.  Deriving from the `Typeable` class makes
-creating the `Exception` instance trivial.  However, using `Typeable`
-means you need to enable the `DeriveDataTypeable` GHC extension.
-
-You can also automatically derive the `Show` instance as with most
-other types, but creating one manually allows you to write a more
-descriptive message for the custom exception.
-
-</div>
-
-~~~{.haskell include="src/catch-throw.hs" token="ex"}
-~~~
-
-# Threads and Exceptions
-
-<div class="notes">
-
-Concurrency greatly complicates exception handling.  The GHC runtime
-uses exceptions to send various signals to threads.  You also need to
-be very careful with unevaluated thunks exiting from a thread when it
-terminates.
-
-</div>
-
-Additional problems created by concurrency:
-
-  * Exceptions are used to kill threads.
-
-  * Exceptions are asynchronous.
-
-  * Need to mask exceptions in critical code.
-
-  * Probably don't want unevaluated exceptions leaking out.
-
-# There's a Package For That
-
-Just use the [async][] package.
-
-[async]: http://hackage.haskell.org/package/async
 
 # Turning Exceptions into Errors
 
@@ -416,3 +482,7 @@ try :: Exception e => IO a -> IO (Either e a)
 -- Which is equivalent to:
 try :: Exception e => IO a -> ErrorT e IO a
 ~~~
+
+# Final Thought
+
+**Prefer Errors to Exceptions!**

@@ -12,6 +12,7 @@ PANDOC             = $(DEVALOT_PANDOC_BIN)/pandoc
 
 ################################################################################
 all: $(DEVALOT_PANDOC) README.md README.html slides.html
+	$(MAKE) -C src
 
 ################################################################################
 clean::

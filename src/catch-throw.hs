@@ -18,6 +18,7 @@ module Main (main) where
 --------------------------------------------------------------------------------
 import Control.Applicative
 import Control.Exception
+import Control.Monad
 import Data.Typeable
 import System.Environment
 
@@ -34,6 +35,15 @@ instance Exception StupidException
 -- {END}
 
 --------------------------------------------------------------------------------
+-- {BEGIN: throwIO}
+shortFuse :: Int -> IO Int
+shortFuse x =
+  if x > 0
+    then return (x - 1)
+    else throwIO StupidException
+-- {END}
+
+--------------------------------------------------------------------------------
 -- {BEGIN: throw}
 naughtyFunction :: Int -> Int
 naughtyFunction x =
@@ -46,7 +56,7 @@ naughtyFunction x =
 -- {BEGIN: inline}
 inline :: Int -> IO Int
 inline x =
-  catch (return $! naughtyFunction x)
+  catch (shortFuse x)
         (\(_ex :: StupidException) -> return 0)
 -- {END}
 
@@ -54,7 +64,7 @@ inline x =
 -- {BEGIN: helper}
 helper :: Int -> IO Int
 helper x =
-  catch (return $! naughtyFunction x)
+  catch (shortFuse x)
         handler
   where
     handler :: StupidException -> IO Int
@@ -62,12 +72,25 @@ helper x =
 -- {END}
 
 --------------------------------------------------------------------------------
+-- {BEGIN: forced}
+forced :: Int -> IO Int
+forced x =
+  catch (return $! naughtyFunction x)
+        (\(_ex :: StupidException) -> return 0)
+-- {END}
+
+--------------------------------------------------------------------------------
+functions :: [(String, (Int -> IO Int))]
+functions = [ ("inline", inline)
+            , ("helper", helper)
+            , ("forced", forced)
+            ]
+
+--------------------------------------------------------------------------------
 main :: IO ()
 main = do
-  args <- fmap read <$> getArgs
+  (int:_) <- fmap read <$> getArgs
 
-  print =<< case args of
-    []    -> inline 0
-    (0:_) -> helper 0
-    (1:_) -> helper 1
-    (x:_) -> inline x
+  forM_ functions $ \(name, f) -> do
+    putStr (name ++ ": ")
+    print =<< f int
