@@ -5,6 +5,7 @@
 # Exceptions
 
 ![Exceptions](img/explosion.jpg)\
+
 Creative Commons image by [gynti](http://www.flickr.com/photos/gynti)
 
 <div class="notes">
