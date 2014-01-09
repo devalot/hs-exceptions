@@ -374,7 +374,7 @@ If you have several functions that return one of these types you can use
 failure. This allows you to write short code that implicitly checks the
 return value of every function.
 
-Things tend to get a bit messing when you mix monads though...
+Things tend to get a bit messy when you mix monads though...
 
 
 
@@ -405,7 +405,7 @@ size f = do
 
 
 Because `IO` is the outer monad and we can't do without it, we sort of
-loose the superpowers of the `Maybe` monad.
+lose the superpowers of the `Maybe` monad.
 
 
 
@@ -441,7 +441,7 @@ sizeT f = do
     else mzero
 ~~~~
 
-# Maybe T
+# MaybeT
 
 
 

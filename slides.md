@@ -339,7 +339,7 @@ use `do` notation to sequence them and abort the entire block on the
 first failure.  This allows you to write short code that implicitly
 checks the return value of every function.
 
-Things tend to get a bit messing when you mix monads though...
+Things tend to get a bit messy when you mix monads though...
 
 </div>
 
@@ -364,7 +364,7 @@ complicated, but what happens when we want to use the power of the
 <div class="notes">
 
 Because `IO` is the outer monad and we can't do without it, we sort of
-loose the superpowers of the `Maybe` monad.
+lose the superpowers of the `Maybe` monad.
 
 </div>
 
@@ -385,7 +385,7 @@ same.
 ~~~{.haskell include="src/maybe.hs" token="sizeT"}
 ~~~
 
-# Maybe T
+# MaybeT
 
 <div class="notes">
 
