@@ -486,4 +486,6 @@ try :: Exception e => IO a -> ErrorT e IO a
 
 # Final Thought
 
-**Prefer Errors to Exceptions!**
+  * **Prefer Errors to Exceptions!**
+
+  * **Don't Write/Use Partial Functions!**
