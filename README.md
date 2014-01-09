@@ -441,7 +441,7 @@ sizeT f = do
     else mzero
 ~~~~
 
-# Maybe T
+# MaybeT
 
 
 
