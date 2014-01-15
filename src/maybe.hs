@@ -16,6 +16,7 @@ module Main (main) where
 --------------------------------------------------------------------------------
 import Control.Applicative
 import Control.Monad
+import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 import System.Environment
@@ -31,7 +32,7 @@ fileSize f = withFile f ReadMode hFileSize
 size :: FilePath -> IO (Maybe Integer)
 size f = do
   exist <- fileExist f
-  
+
   if exist
     then Just <$> fileSize f
     else return Nothing
@@ -51,31 +52,45 @@ add f1 f2 = do
 -- {END}
 
 --------------------------------------------------------------------------------
--- {BEGIN: sizeT}  
+-- {BEGIN: sizeT}
 sizeT :: FilePath -> MaybeT IO Integer
 sizeT f = do
   exist <- lift (fileExist f)
-           
+
   if exist
     then lift (fileSize f)
     else mzero
 -- {END}
 
 --------------------------------------------------------------------------------
--- {BEGIN: addT}  
+-- {BEGIN: addT}
 addT :: FilePath -> FilePath -> IO (Maybe Integer)
 addT f1 f2 = runMaybeT $ do
   s1 <- sizeT f1
   s2 <- sizeT f2
   return (s1 + s2)
 -- {END}
-  
+
 --------------------------------------------------------------------------------
-main :: IO ()    
+sizeT' :: (MonadIO m) => FilePath -> MaybeT m Integer
+sizeT' f = do
+  guard =<< liftIO (fileExist f)
+  liftIO (fileSize f)
+
+--------------------------------------------------------------------------------
+addT' :: FilePath -> FilePath -> IO (Maybe Integer)
+addT' f1 f2 = runMaybeT $ do
+  s1 <- sizeT' f1
+  s2 <- sizeT' f2
+  return (s1 + s2)
+
+--------------------------------------------------------------------------------
+main :: IO ()
 main = do
   args  <- getArgs
 
   case args of
-    (x:y:_) -> do print =<< add  x y
-                  print =<< addT x y
+    (x:y:_) -> do print =<< add   x y
+                  print =<< addT  x y
+                  print =<< addT' x y
     _       -> putStrLn "read the source code dork"
